@@ -1,52 +1,593 @@
+
+
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
-    <meta charset="utf-8">
-    <title>绿色预览</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑芙 · 绘卷</title>
     <style>
-        body {
+        /* ===== 全局重置 ===== */
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #06080c;
+            font-family: system-ui, -apple-system, sans-serif;
             height: 100vh;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: system-ui, sans-serif;
-            background-color: #161618;
         }
+
+        /* ===== 背景画布（光晕 + 浮游粒子） ===== */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== 绘画画布（鼠标轨迹粒子，在卡片之上） ===== */
+        #paintCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* ===== 卡片（黑芙·暗潮风格，半透明毛玻璃） ===== */
         .card {
-            background-color: #232326;
-            padding: 50px 70px;
-            border-radius: 24px;
+            position: relative;
+            z-index: 10;
+            background: rgba(17, 22, 31, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(74, 107, 154, 0.15);
+            border-radius: 28px;
+            padding: 48px 60px 52px;
+            max-width: 460px;
+            width: 90%;
             text-align: center;
-            color: #e8e8e8;
-            max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            transition: all 0.4s ease;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(74, 107, 154, 0.08);
+            transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
         }
         .card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
+            transform: translateY(-6px);
         }
-        h2 { font-weight: 400; font-size: 32px; margin-bottom: 10px; }
-        .sub { color: #57A99A; font-size: 18px; margin-bottom: 30px; }
-        .btn-soft {
-            background-color: #2A9D8F;
-            color: #161618;
-            border: none;
-            padding: 12px 40px;
-            border-radius: 40px;
-            font-size: 18px;
+
+        .water-icon {
+            font-size: 38px;
+            display: block;
+            margin-bottom: 8px;
+            color: #4a6b9a;
+            opacity: 0.5;
+            letter-spacing: 4px;
+        }
+
+        h2 {
+            font-weight: 300;
+            font-size: 34px;
+            letter-spacing: 4px;
+            color: #d6dff0;
+            margin-bottom: 6px;
+        }
+
+        .sub {
+            color: #8296b9;
+            font-size: 16px;
+            letter-spacing: 1.5px;
+            opacity: 0.8;
+            margin-bottom: 32px;
+        }
+
+        /* ===== 按钮 + 粒子按键 ===== */
+        .btn-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        #actionBtn {
+            background: linear-gradient(135deg, #1e2a3f, #2c3d5c);
+            color: #d6dff0;
+            border: 1px solid rgba(74, 107, 154, 0.3);
+            padding: 14px 52px;
+            border-radius: 60px;
+            font-size: 17px;
+            font-weight: 500;
+            letter-spacing: 2px;
             cursor: pointer;
-            font-weight: 600;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 30px rgba(44, 61, 92, 0.15);
         }
-        .btn-soft:hover { filter: brightness(1.15); }
+        #actionBtn:hover {
+            background: linear-gradient(135deg, #2c3d5c, #3b5a7a);
+            border-color: rgba(100, 150, 210, 0.5);
+            box-shadow: 0 0 50px rgba(44, 61, 92, 0.3);
+            color: #ffffff;
+        }
+
+        /* 按钮上的粒子画布 */
+        #btnParticleCanvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 130%;
+            height: 130%;
+            pointer-events: none;
+            z-index: 1;
+            border-radius: 60px;
+        }
+
+        /* ===== 鼠标提示 ===== */
+        .hint {
+            margin-top: 28px;
+            font-size: 12px;
+            color: #4a5a6a;
+            letter-spacing: 1px;
+            border-top: 1px solid rgba(74, 107, 154, 0.08);
+            padding-top: 22px;
+        }
+        .hint span {
+            color: #6b8dbf;
+        }
     </style>
 </head>
 <body>
+
+    <!-- 背景画布（光晕 + 浮游粒子） -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- 绘画画布（鼠标轨迹粒子，在卡片之上） -->
+    <canvas id="paintCanvas"></canvas>
+
+    <!-- 卡片 -->
     <div class="card">
-        <h2>沉稳 · 自然</h2>
-        <p class="sub">像翡翠在深色绒布上</p>
-        <button class="btn-soft">进入工作区</button>
+        <span class="water-icon">❄️</span>
+        <h2>黑芙 · 绘卷</h2>
+        <p class="sub">「移动鼠标 · 以光为墨」</p>
+
+        <div class="btn-wrapper" id="btnWrapper">
+            <button id="actionBtn">进入静海</button>
+            <canvas id="btnParticleCanvas"></canvas>
+        </div>
+
+        <div class="hint">✦ 点击按钮 · 粒子潮汐 ✦ <span>｜</span> 悬停扰动 · 绘画留痕</div>
     </div>
+
+    <script>
+        // ================================================================
+        //  第一部分：背景画布 —— 光晕 + 浮游粒子
+        //  浮游粒子尺寸 15~20px，颜色仅深蓝黑，透明度 opacity * 0.4
+        // ================================================================
+        const bgCanvas = document.getElementById('bgCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        let bgW, bgH;
+
+        function resizeBg() {
+            bgW = bgCanvas.width = window.innerWidth;
+            bgH = bgCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeBg);
+        resizeBg();
+
+        // --- 浮游粒子 ---
+        class FloatParticle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * bgW;
+                this.y = Math.random() * bgH;
+                // ★ 尺寸 15~20px
+                this.size = 15 + Math.random() * 5;
+                this.speedX = (Math.random() - 0.5) * 0.2;
+                this.speedY = (Math.random() - 0.5) * 0.2;
+                // ★ 透明度降低
+                this.opacity = 0.1 + Math.random() * 0.2;
+                // ★ 仅保留深蓝黑
+                const colors = ['#0b121c', '#1a2b4c', '#2c3d5c', '#4a6b9a'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.life = 0;
+                this.maxLife = 200 + Math.random() * 400;
+            }
+            update() {
+                this.x += this.speedX + Math.sin(this.life * 0.005) * 0.06;
+                this.y += this.speedY + Math.cos(this.life * 0.007) * 0.06;
+                this.life++;
+                if (this.x < 0 || this.x > bgW) this.speedX *= -1;
+                if (this.y < 0 || this.y > bgH) this.speedY *= -1;
+                if (this.life > this.maxLife) {
+                    this.reset();
+                    this.life = 0;
+                }
+            }
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity * 0.4; // ★ 透明度系数 0.4
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 20;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        const floatParticles = [];
+        for (let i = 0; i < 60; i++) { // 减少数量因为尺寸大了
+            const p = new FloatParticle();
+            p.life = Math.random() * p.maxLife;
+            floatParticles.push(p);
+        }
+
+        // --- 光晕（保持不变） ---
+        class Glow {
+            constructor() {
+                this.x = Math.random() * bgW;
+                this.y = Math.random() * bgH;
+                this.radius = 180 + Math.random() * 300;
+                this.speedX = (Math.random() - 0.5) * 0.3;
+                this.speedY = (Math.random() - 0.5) * 0.3;
+                const colors = ['#0b121c', '#1a2b4c', '#2c3d5c'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.opacity = 0.05 + Math.random() * 0.08;
+                this.phase = Math.random() * Math.PI * 2;
+            }
+            update() {
+                this.x += this.speedX + Math.sin(this.phase) * 0.15;
+                this.y += this.speedY + Math.cos(this.phase * 0.7) * 0.15;
+                this.phase += 0.005;
+                if (this.x < -200 || this.x > bgW + 200) this.speedX *= -1;
+                if (this.y < -200 || this.y > bgH + 200) this.speedY *= -1;
+                this.radius += Math.sin(this.phase * 0.5) * 0.15;
+                if (this.radius < 150) this.radius = 150;
+                if (this.radius > 500) this.radius = 500;
+            }
+            draw(ctx) {
+                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                grad.addColorStop(0, this.color + '80');
+                grad.addColorStop(0.4, this.color + '40');
+                grad.addColorStop(1, this.color + '00');
+                ctx.fillStyle = grad;
+                ctx.globalAlpha = this.opacity;
+                ctx.fillRect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        const glows = [];
+        for (let i = 0; i < 4; i++) {
+            glows.push(new Glow());
+        }
+
+        function animateBg() {
+            bgCtx.clearRect(0, 0, bgW, bgH);
+            glows.forEach(g => { g.update();
+                g.draw(bgCtx); });
+            floatParticles.forEach(p => { p.update();
+                p.draw(bgCtx); });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        // ================================================================
+        //  第二部分：绘画画布 —— 鼠标轨迹粒子
+        //  尺寸 0.5~7px，颜色包含亮色，透明度 life * 0.7
+        // ================================================================
+        const paintCanvas = document.getElementById('paintCanvas');
+        const paintCtx = paintCanvas.getContext('2d');
+        let paintW, paintH;
+
+        function resizePaint() {
+            paintW = paintCanvas.width = window.innerWidth;
+            paintH = paintCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizePaint);
+        resizePaint();
+
+        // --- 绘画粒子 ---
+        class PaintParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.2 + Math.random() * 0.6;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed - 0.1;
+                // ★ 尺寸 0.5~7px
+                this.size = 0.5 + Math.random() * 6.5;
+                // ★ 颜色包含亮色和深色
+                const colors = ['#a8c4e6', '#d6dff0', '#1a2b4c', '#2c3d5c', '#0b121c', '#4a6b9a'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.life = 1;
+                this.decay = 0.006 + Math.random() * 0.012;
+                this.drift = (Math.random() - 0.5) * 0.02;
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                this.x += this.vx + Math.sin(this.phase) * 0.1;
+                this.y += this.vy + Math.cos(this.phase * 0.7) * 0.1;
+                this.phase += 0.03;
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+                this.life -= this.decay;
+                this.size *= 0.998;
+                return this.life > 0.01 && this.size > 0.2;
+            }
+
+            draw(ctx) {
+                const alpha = this.life * 0.7; // ★ 透明度系数 0.7
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.3, this.size), 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = alpha;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        const paintParticles = [];
+        const MAX_PAINT = 200;
+
+        function spawnPaintParticles(x, y, count = 3) {
+            for (let i = 0; i < count; i++) {
+                if (paintParticles.length >= MAX_PAINT) {
+                    paintParticles.shift();
+                }
+                const p = new PaintParticle(
+                    x + (Math.random() - 0.5) * 4,
+                    y + (Math.random() - 0.5) * 4
+                );
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.1 + Math.random() * 0.6;
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed - 0.2;
+                paintParticles.push(p);
+            }
+        }
+
+        let isMouseDown = false;
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+            if (isMouseDown) {
+                spawnPaintParticles(x, y, 3);
+            } else {
+                spawnPaintParticles(x, y, 1 + Math.random());
+            }
+        });
+
+        document.addEventListener('mousedown', () => { isMouseDown = true; });
+        document.addEventListener('mouseup', () => { isMouseDown = false; });
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            if (touch) {
+                spawnPaintParticles(touch.clientX, touch.clientY, 2);
+            }
+        }, { passive: false });
+
+        function animatePaint() {
+            paintCtx.clearRect(0, 0, paintW, paintH);
+            for (let i = paintParticles.length - 1; i >= 0; i--) {
+                const p = paintParticles[i];
+                if (p.update()) {
+                    p.draw(paintCtx);
+                } else {
+                    paintParticles.splice(i, 1);
+                }
+            }
+            requestAnimationFrame(animatePaint);
+        }
+        animatePaint();
+
+        // ================================================================
+        //  第三部分：按键粒子（保持不变）
+        // ================================================================
+        const btnCanvas = document.getElementById('btnParticleCanvas');
+        const btnCtx = btnCanvas.getContext('2d');
+        const btnWrapper = document.getElementById('btnWrapper');
+        const actionBtn = document.getElementById('actionBtn');
+
+        let btnW, btnH, btnCx, btnCy, btnRadius;
+        let btnParticles = [];
+        const BTN_MAX = 60;
+        let isBursting = false;
+        let burstTimeout = null;
+
+        const BTN_COLORS = ['#1a2b4c', '#2c3d5c', '#0b121c', '#4a6b9a'];
+
+        class BtnParticle {
+            constructor(angle, radius, size, color) {
+                this.angle = angle || Math.random() * Math.PI * 2;
+                this.radius = radius || btnRadius * (0.4 + Math.random() * 0.7);
+                this.size = size || 2 + Math.random() * 4;
+                this.color = color || BTN_COLORS[Math.floor(Math.random() * BTN_COLORS.length)];
+                this.speed = 0.006 + Math.random() * 0.015;
+                this.phase = Math.random() * Math.PI * 2;
+                this.life = 0.7 + 0.3 * Math.random();
+                this.isBurst = false;
+                this.vx = 0;
+                this.vy = 0;
+                this.burstLife = 1;
+            }
+
+            update() {
+                if (this.isBurst) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.97;
+                    this.vy *= 0.97;
+                    this.burstLife -= 0.012;
+                    this.size *= 0.996;
+                    return this.burstLife > 0.01 && this.size > 0.3;
+                } else {
+                    this.phase += this.speed;
+                    const r = this.radius * (0.85 + 0.15 * Math.sin(this.phase * 1.3));
+                    const a = this.angle + this.phase * 0.6;
+                    this.x = btnCx + Math.cos(a) * r;
+                    this.y = btnCy + Math.sin(a) * r;
+                    this.life = 0.7 + 0.3 * Math.sin(this.phase * 0.5 + 1);
+                    return true;
+                }
+            }
+
+            draw(ctx) {
+                const alpha = this.isBurst ? Math.max(0, this.burstLife * 0.7) : this.life * 0.5;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.5, this.size * (this.isBurst ? 1.2 : 0.8)), 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = alpha;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = this.isBurst ? 15 : 8;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+            }
+
+            burst(angle) {
+                this.isBurst = true;
+                this.burstLife = 1;
+                const dir = angle + (Math.random() - 0.5) * 1.2;
+                const speed = 3 + Math.random() * 6;
+                this.vx = Math.cos(dir) * speed;
+                this.vy = Math.sin(dir) * speed;
+                this.size = 3 + Math.random() * 5;
+            }
+
+            resetToOrbit() {
+                this.isBurst = false;
+                this.burstLife = 1;
+                this.angle = Math.random() * Math.PI * 2;
+                this.radius = btnRadius * (0.4 + Math.random() * 0.7);
+                this.phase = Math.random() * Math.PI * 2;
+                this.size = 2 + Math.random() * 4;
+            }
+        }
+
+        function initBtnParticles() {
+            btnParticles = [];
+            for (let i = 0; i < BTN_MAX; i++) {
+                const p = new BtnParticle();
+                p.phase = (i / BTN_MAX) * Math.PI * 2 + Math.random() * 0.3;
+                btnParticles.push(p);
+            }
+        }
+
+        function resizeBtnCanvas() {
+            const rect = btnWrapper.getBoundingClientRect();
+            const scale = window.devicePixelRatio || 1;
+            btnW = rect.width * scale;
+            btnH = rect.height * scale;
+            btnCanvas.width = btnW;
+            btnCanvas.height = btnH;
+            btnCanvas.style.width = rect.width + 'px';
+            btnCanvas.style.height = rect.height + 'px';
+            btnCx = btnW / 2;
+            btnCy = btnH / 2;
+            btnRadius = Math.min(btnW, btnH) * 0.32;
+            if (btnParticles.length > 0) {
+                btnParticles.forEach(p => {
+                    p.radius = btnRadius * (0.4 + Math.random() * 0.7);
+                });
+            } else {
+                initBtnParticles();
+            }
+        }
+
+        function triggerBurst() {
+            if (isBursting) return;
+            isBursting = true;
+            const baseAngle = Math.random() * Math.PI * 2;
+            btnParticles.forEach((p, i) => {
+                const angle = baseAngle + (i / btnParticles.length) * Math.PI * 2;
+                p.burst(angle);
+            });
+            if (burstTimeout) clearTimeout(burstTimeout);
+            burstTimeout = setTimeout(() => {
+                isBursting = false;
+                btnParticles.forEach(p => p.resetToOrbit());
+                btnParticles.forEach((p, i) => {
+                    p.angle = (i / btnParticles.length) * Math.PI * 2 + Math.random() * 0.2;
+                    p.phase = p.angle * 1.5;
+                });
+            }, 1600);
+        }
+
+        let hoverIntensity = 0;
+
+        function animateBtnParticles() {
+            btnCtx.clearRect(0, 0, btnW, btnH);
+            btnParticles.forEach(p => {
+                if (!p.isBurst) {
+                    if (hoverIntensity > 0.1) {
+                        p.speed = 0.015 + hoverIntensity * 0.04;
+                    } else {
+                        p.speed = 0.006 + Math.random() * 0.01;
+                    }
+                }
+                p.update();
+                p.draw(btnCtx);
+            });
+            requestAnimationFrame(animateBtnParticles);
+        }
+
+        actionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            triggerBurst();
+        });
+
+        actionBtn.addEventListener('mouseenter', () => {
+            hoverIntensity = 1;
+            btnParticles.forEach(p => {
+                if (!p.isBurst) {
+                    p.phase += 0.5 + Math.random() * 0.5;
+                }
+            });
+        });
+
+        actionBtn.addEventListener('mouseleave', () => {
+            hoverIntensity = 0;
+        });
+
+        window.addEventListener('resize', () => {
+            resizeBtnCanvas();
+        });
+
+        setTimeout(() => {
+            resizeBtnCanvas();
+            initBtnParticles();
+            animateBtnParticles();
+        }, 150);
+
+        // ================================================================
+        //  窗口变化统一适配
+        // ================================================================
+        window.addEventListener('resize', () => {
+            resizeBg();
+            resizePaint();
+        });
+
+        console.log('✦ 黑芙 · 绘卷已加载 ✦ 移动鼠标绘画 · 点击按钮潮汐');
+    </script>
 </body>
 </html>
