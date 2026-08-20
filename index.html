@@ -13,6 +13,9 @@
 @font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:300;font-display:swap;src:url(fonts/cormorant-300-italic.woff2) format('woff2');}
 @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/cormorant-400-normal.woff2) format('woff2');}
 @font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:400;font-display:swap;src:url(fonts/cormorant-400-italic.woff2) format('woff2');}
+
+
+  
 :root{
   --bg:#06080C;
   --bg-soft:#0d1117;
@@ -227,6 +230,11 @@ body, .name, .name span, .slogan, .slogan span, .contact a, .footer, .theme-togg
   100%{transform:translate(-50%,-50%) scale(8);opacity:0;}
 }
 </style>
+<script>
+  (function() {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+</script>
 </head>
 <body>
 
@@ -422,9 +430,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 /* ===== 主题切换（无记忆，每次刷新默认深色） ===== */
 const themeToggle = document.getElementById('themeToggle');
 
-// 强制初始化深色
-document.documentElement.setAttribute('data-theme', 'dark');
-document.body.classList.remove('light');
 
 // 切换按钮：只改变当前页面，不存储
 themeToggle.addEventListener('click', () => {
@@ -461,6 +466,8 @@ window.addEventListener('mousemove',e=>{
   center.style.transform='translate('+curPx+'px,'+curPy+'px)';
   requestAnimationFrame(parallax);
 })();
-</script>
+
+
+
 </body>
 </html>
