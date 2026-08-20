@@ -5,18 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lani · Zucker</title>
 <meta name="description" content="Lani · Zucker">
-<script>
-/* 页面解析前立即应用主题，避免中途跳变 */
-(function(){
-  var saved=localStorage.getItem('lani-theme');
-  var html=document.documentElement;
-  if(saved==='dark'){
-    html.setAttribute('data-theme','dark');
-    document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('dark');});
-  }else{
-    html.setAttribute('data-theme','light');
-  }
-})();
+
 </script>
 <!-- 本地字体，离线可用 -->
 <style>
