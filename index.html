@@ -423,9 +423,8 @@ function setGlow(group,idx){
 function resetGroup(group){clearStates(group);}
 
 // 启动：直接开始逐字打印（去掉遮罩，打开即打字）
-window.addEventListener('DOMContentLoaded',()=>{
-  setTimeout(typeName, 300);
-});
+// 启动：直接开始逐字打印（DOM已就绪，无需等待事件）
+setTimeout(typeName, 300);
 
 /* ===== 主题切换（无记忆，每次刷新默认深色） ===== */
 const themeToggle = document.getElementById('themeToggle');
