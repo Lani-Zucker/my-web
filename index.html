@@ -1,593 +1,485 @@
-
-
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lani · Zucker</title>
-    <style>
-        /* ===== 全局重置 ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            background: #06080c;
-            font-family: system-ui, -apple-system, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lani · Zucker</title>
+<meta name="description" content="Lani · Zucker">
+<script>
+/* 页面解析前立即应用主题，避免中途跳变 */
+(function(){
+  var saved=localStorage.getItem('lani-theme');
+  var html=document.documentElement;
+  if(saved==='light'){
+    html.setAttribute('data-theme','light');
+    document.addEventListener('DOMContentLoaded',function(){document.body.classList.add('light');});
+  }else{
+    html.setAttribute('data-theme','dark');
+  }
+})();
+</script>
+<!-- 本地字体，离线可用 -->
+<style>
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:300;font-display:swap;src:url(fonts/cormorant-300-normal.woff2) format('woff2');}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:300;font-display:swap;src:url(fonts/cormorant-300-italic.woff2) format('woff2');}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/cormorant-400-normal.woff2) format('woff2');}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:400;font-display:swap;src:url(fonts/cormorant-400-italic.woff2) format('woff2');}
+:root{
+  --bg:#06080C;
+  --bg-soft:#0d1117;
+  --accent:#4A6B9A;
+  --accent-bright:#6B8CC0;
+  --text-bright:#D6DFF0;
+  --text-dim:#8296B9;
+  --text-white:#FFFFFF;
+  --particle-blue:'74,107,154';
+  --particle-blue2:'59,90,122';
+  --particle-blue3:'107,133,181';
+  --glow-opacity:.18;
+  --glow2-opacity:.06;
+  --corner-opacity:.4;
+  --line-color:rgba(74,107,154,.25);
+  --icon-bg:rgba(17,22,31,.4);
+  --name-blue:#6B8CC0;
+  --name-hover:#D6DFF0;
+  --shadow-bright:rgba(214,223,240,.9);
+  --cursor-ring:rgba(130,150,185,.6);
+}
+[data-theme="light"]{
+  --bg:#D6DFF0;
+  --bg-soft:#C6D2E8;
+  --accent:#4A6B9A;
+  --accent-bright:#3B5A7A;
+  --text-bright:#11161F;
+  --text-dim:#4A6B9A;
+  --text-white:#06080C;
+  --particle-blue:'44,61,92';
+  --particle-blue2:'59,90,122';
+  --particle-blue3:'74,107,154';
+  --glow-opacity:.25;
+  --glow2-opacity:.1;
+  --corner-opacity:.5;
+  --line-color:rgba(59,90,122,.3);
+  --icon-bg:rgba(255,255,255,.6);
+  --name-blue:#2C3D5C;
+  --name-hover:#06080C;
+  --shadow-bright:rgba(6,8,12,.5);
+  --cursor-ring:rgba(59,90,122,.5);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  background:var(--bg);color:var(--text-bright);
+  font-family:'Cormorant Garamond',Georgia,serif;
+  height:100vh;overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  transition:background .6s,color .6s;
+}
+body.light{cursor:auto;}
+@media(min-width:601px){body:not(.light){cursor:none;}}
+/* 所有文字不可选中复制 */
+body, .name, .name span, .slogan, .slogan span, .contact a, .footer, .theme-toggle{
+  -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+}
+::selection{background:transparent;}
 
-        /* ===== 背景画布（光晕 + 浮游粒子） ===== */
-        #bgCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 0;
-            pointer-events: none;
-        }
+/* ===== 自定义光标（仅深色+非触屏） ===== */
+#cursorDot,#cursorRing{display:none;}
+@media(min-width:601px){
+  body:not(.light) #cursorDot{display:block;position:fixed;width:8px;height:8px;border-radius:50%;background:var(--accent-bright);z-index:1000;pointer-events:none;transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(74,107,154,.8);mix-blend-mode:screen;transition:background .4s;}
+  body:not(.light) #cursorRing{display:block;position:fixed;width:32px;height:32px;border-radius:50%;border:1px solid var(--cursor-ring);z-index:999;pointer-events:none;transform:translate(-50%,-50%);transition:width .25s,height .25s,border-color .25s,background .4s;}
+}
 
-        /* ===== 绘画画布（鼠标轨迹粒子，在卡片之上） ===== */
-        #paintCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 20;
-            pointer-events: none;
-        }
+/* ===== 背景动态渐变 ===== */
+.bg-aurora{
+  position:fixed;inset:-20%;z-index:0;pointer-events:none;transition:background .6s;
+  background:
+    radial-gradient(ellipse 40% 35% at 20% 30%, rgba(59,90,122,.28), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 80% 70%, rgba(74,107,154,.20), transparent 70%),
+    radial-gradient(ellipse 30% 30% at 65% 20%, rgba(44,61,92,.18), transparent 70%);
+  filter:blur(40px);
+  animation:auroraMove 18s ease-in-out infinite alternate;
+}
+[data-theme="light"] .bg-aurora{
+  background:
+    radial-gradient(ellipse 40% 35% at 20% 30%, rgba(107,133,181,.3), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 80% 70%, rgba(74,107,154,.25), transparent 70%),
+    radial-gradient(ellipse 30% 30% at 65% 20%, rgba(130,150,185,.22), transparent 70%);
+}
+@keyframes auroraMove{
+  0%{transform:translate(0,0) scale(1);}
+  50%{transform:translate(2%,-2%) scale(1.05);}
+  100%{transform:translate(-2%,2%) scale(1.02);}
+}
+.corner{position:fixed;width:30vw;height:30vw;z-index:0;pointer-events:none;filter:blur(60px);transition:opacity .6s;}
+.corner.tl{top:-12vw;left:-12vw;background:radial-gradient(circle,rgba(74,107,154,.35),transparent 70%);}
+.corner.tr{top:-12vw;right:-12vw;background:radial-gradient(circle,rgba(59,90,122,.28),transparent 70%);}
+.corner.bl{bottom:-12vw;left:-12vw;background:radial-gradient(circle,rgba(44,61,92,.25),transparent 70%);}
+.corner.br{bottom:-12vw;right:-12vw;background:radial-gradient(circle,rgba(74,107,154,.3),transparent 70%);}
 
-        /* ===== 卡片（黑芙·暗潮风格，半透明毛玻璃） ===== */
-        .card {
-            position: relative;
-            z-index: 10;
-            background: rgba(17, 22, 31, 0.75);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(74, 107, 154, 0.15);
-            border-radius: 28px;
-            padding: 48px 60px 52px;
-            max-width: 460px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(74, 107, 154, 0.08);
-            transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-        }
-        .card:hover {
-            transform: translateY(-6px);
-        }
+#canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.cursor-glow{
+  position:fixed;width:700px;height:700px;border-radius:50%;
+  background:radial-gradient(circle, rgba(74,107,154,var(--glow-opacity)) 0%, rgba(59,90,122,var(--glow2-opacity)) 45%, transparent 70%);
+  pointer-events:none;transform:translate(-50%,-50%);z-index:0;
+  will-change:left,top;transition:background .6s;
+}
 
-        .water-icon {
-            font-size: 38px;
-            display: block;
-            margin-bottom: 8px;
-            color: #4a6b9a;
-            opacity: 0.5;
-            letter-spacing: 4px;
-        }
+/* ===== 居中内容 ===== */
+.center{
+  position:fixed;inset:0;z-index:1;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+}
+.name{
+  font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;
+  font-style:italic;
+  font-size:clamp(52px,9vw,112px);
+  letter-spacing:6px;line-height:1.05;
+  color:var(--name-blue);
+  display:flex;transition:color .5s;
+}
+.name .dot{color:var(--accent-bright);font-weight:500;margin:0 4px;font-style:normal;}
+.name .caret{color:var(--name-blue);font-weight:400;opacity:1;animation:caretBlink 1s step-end infinite;margin-left:2px;}
+@keyframes caretBlink{0%,100%{opacity:1;}50%{opacity:0;}}
 
-        h2 {
-            font-weight: 300;
-            font-size: 34px;
-            letter-spacing: 4px;
-            color: #d6dff0;
-            margin-bottom: 6px;
-        }
+.slogan{
+  font-family:'Cormorant Garamond',Georgia,serif;font-weight:300;
+  font-style:italic;
+  font-size:clamp(15px,2vw,20px);
+  letter-spacing:3px;color:var(--text-dim);
+  margin-top:56px;opacity:0;
+  display:flex;transition:color .5s;
+}
+.slogan.show{animation:sloganFade 1.2s both;}
+@keyframes sloganFade{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 
-        .sub {
-            color: #8296b9;
-            font-size: 16px;
-            letter-spacing: 1.5px;
-            opacity: 0.8;
-            margin-bottom: 32px;
-        }
+/* ===== 逐字渐变带动 ===== */
+.name .ch, .slogan .ch{
+  display:inline-block;
+  transition:color .5s ease, text-shadow .5s ease;
+  will-change:color,text-shadow;
+}
+.name .ch.space, .slogan .ch.space{width:.55em;}
+.name .ch.active, .slogan .ch.active{
+  color:var(--name-hover);
+  text-shadow:0 0 30px var(--shadow-bright);
+}
+.name .ch.glow1, .slogan .ch.glow1{
+  color:var(--text-white);
+  text-shadow:0 0 18px var(--shadow-bright);
+}
+.name .ch.glow2, .slogan .ch.glow2{
+  color:var(--text-bright);
+  text-shadow:0 0 10px var(--shadow-bright);
+}
+.name .ch.glow3, .slogan .ch.glow3{
+  text-shadow:0 0 6px var(--shadow-bright);
+}
 
-        /* ===== 按钮 + 粒子按键 ===== */
-        .btn-wrapper {
-            position: relative;
-            display: inline-block;
-        }
+/* ===== 左下角主题切换 + 右下角 GitHub ===== */
+.contact{
+  position:fixed;z-index:2;
+  display:flex;flex-direction:column;gap:12px;
+}
+.contact a,.theme-toggle{
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-dim);font-size:13px;
+  border:1px solid var(--line-color);
+  background:var(--icon-bg);
+  text-decoration:none;cursor:pointer;
+  transition:color .5s, border-color .5s, box-shadow .5s, transform .4s, background .5s;
+}
+.theme-toggle svg{width:17px;height:17px;fill:currentColor;display:block;opacity:.6;transition:opacity .4s,transform .5s;}
+.theme-toggle:hover svg{opacity:1;transform:rotate(180deg);}
+.contact a svg{width:18px;height:18px;fill:currentColor;display:block;opacity:.55;transition:opacity .5s, transform .4s;}
+.contact a.github{animation:breathSoft 4s ease-in-out 1s infinite;}
+@keyframes breathSoft{
+  0%,100%{opacity:.45;box-shadow:0 0 4px rgba(74,107,154,.06);}
+  50%{opacity:.75;box-shadow:0 0 16px rgba(74,107,154,.25);}
+}
+.contact a:hover,.theme-toggle:hover{
+  color:#ffffff;border-color:var(--accent);
+  background:rgba(74,107,154,.2);
+  transform:translateY(-2px) scale(1.12);
+  box-shadow:0 0 24px rgba(74,107,154,.35);
+}
+.contact a:hover svg{opacity:1;}
+.contact.right{bottom:32px;right:32px;}
+.theme-toggle.bottom{bottom:32px;left:32px;position:fixed;z-index:2;}
+@media(max-width:600px){
+  .contact.right{bottom:24px;right:20px;}
+  .theme-toggle.bottom{bottom:24px;left:20px;}
+}
 
-        #actionBtn {
-            background: linear-gradient(135deg, #1e2a3f, #2c3d5c);
-            color: #d6dff0;
-            border: 1px solid rgba(74, 107, 154, 0.3);
-            padding: 14px 52px;
-            border-radius: 60px;
-            font-size: 17px;
-            font-weight: 500;
-            letter-spacing: 2px;
-            cursor: pointer;
-            position: relative;
-            z-index: 2;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 30px rgba(44, 61, 92, 0.15);
-        }
-        #actionBtn:hover {
-            background: linear-gradient(135deg, #2c3d5c, #3b5a7a);
-            border-color: rgba(100, 150, 210, 0.5);
-            box-shadow: 0 0 50px rgba(44, 61, 92, 0.3);
-            color: #ffffff;
-        }
+/* ===== 版权 ===== */
+.footer{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  z-index:1;font-size:10px;letter-spacing:2px;color:var(--text-dim);
+  font-family:'Cormorant Garamond',Georgia,serif;opacity:.6;
+  transition:color .5s;animation:breathFooter 6s ease-in-out 2.5s infinite;
+}
+@keyframes breathFooter{
+  0%,100%{opacity:.4;text-shadow:none;}
+  50%{opacity:.7;text-shadow:0 0 10px var(--shadow-bright);}
+}
+.footer:hover{color:var(--text-bright);text-shadow:0 0 14px var(--shadow-bright);}
 
-        /* 按钮上的粒子画布 */
-        #btnParticleCanvas {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 130%;
-            height: 130%;
-            pointer-events: none;
-            z-index: 1;
-            border-radius: 60px;
-        }
-
-        /* ===== 鼠标提示 ===== */
-        .hint {
-            margin-top: 28px;
-            font-size: 12px;
-            color: #4a5a6a;
-            letter-spacing: 1px;
-            border-top: 1px solid rgba(74, 107, 154, 0.08);
-            padding-top: 22px;
-        }
-        .hint span {
-            color: #6b8dbf;
-        }
-    </style>
+/* ===== 点击涟漪 ===== */
+.ripple{
+  position:absolute;border-radius:50%;border:2px solid var(--accent-bright);
+  transform:translate(-50%,-50%) scale(0);opacity:.7;pointer-events:none;
+  animation:rippleAnim .8s ease-out forwards;z-index:5;
+}
+@keyframes rippleAnim{
+  0%{transform:translate(-50%,-50%) scale(.2);opacity:.7;}
+  100%{transform:translate(-50%,-50%) scale(8);opacity:0;}
+}
+</style>
 </head>
 <body>
 
-    <!-- 背景画布（光晕 + 浮游粒子） -->
-    <canvas id="bgCanvas"></canvas>
+<!-- 背景层 -->
+<div class="bg-aurora"></div>
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+<canvas id="canvas"></canvas>
+<div id="cursorGlow" class="cursor-glow"></div>
 
-    <!-- 绘画画布（鼠标轨迹粒子，在卡片之上） -->
-    <canvas id="paintCanvas"></canvas>
+<!-- 自定义光标 -->
+<div id="cursorDot"></div>
+<div id="cursorRing"></div>
 
-    <!-- 卡片 -->
-    <div class="card">
-        <span class="water-icon">❄️</span>
-        <h2>Lani · Zucker</h2>
-        <p class="sub">「移动鼠标 · 以光为墨」</p>
+<!-- 居中：名字 + slogan -->
+<div class="center">
+  <h1 class="name" id="name"></h1>
+  <p class="slogan" id="slogan">In silence, I awaken the machine</p>
+</div>
 
-        <div class="btn-wrapper" id="btnWrapper">
-            <button id="actionBtn">进入静海</button>
-            <canvas id="btnParticleCanvas"></canvas>
-        </div>
+<!-- 左下角主题切换 -->
+<button class="theme-toggle bottom" id="themeToggle" title="切换亮暗" aria-label="切换亮暗">
+  <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+</button>
 
-        <div class="hint">✦ 点击按钮 · 粒子潮汐 ✦ <span>｜</span> 悬停扰动 · 绘画留痕</div>
-    </div>
+<!-- 右下角 GitHub -->
+<div class="contact right">
+  <a href="https://github.com/Lani-Zucker" title="GitHub" class="github" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
+</div>
 
-    <script>
-        // ================================================================
-        //  第一部分：背景画布 —— 光晕 + 浮游粒子
-        //  浮游粒子尺寸 15~20px，颜色仅深蓝黑，透明度 opacity * 0.4
-        // ================================================================
-        const bgCanvas = document.getElementById('bgCanvas');
-        const bgCtx = bgCanvas.getContext('2d');
-        let bgW, bgH;
+<div class="footer">© <span id="year"></span> LANI·ZUCKER</div>
 
-        function resizeBg() {
-            bgW = bgCanvas.width = window.innerWidth;
-            bgH = bgCanvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeBg);
-        resizeBg();
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
 
-        // --- 浮游粒子 ---
-        class FloatParticle {
-            constructor() {
-                this.reset();
-            }
-            reset() {
-                this.x = Math.random() * bgW;
-                this.y = Math.random() * bgH;
-                // ★ 尺寸 15~20px
-                this.size = 15 + Math.random() * 5;
-                this.speedX = (Math.random() - 0.5) * 0.2;
-                this.speedY = (Math.random() - 0.5) * 0.2;
-                // ★ 透明度降低
-                this.opacity = 0.1 + Math.random() * 0.2;
-                // ★ 仅保留深蓝黑
-                const colors = ['#0b121c', '#1a2b4c', '#2c3d5c', '#4a6b9a'];
-                this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.life = 0;
-                this.maxLife = 200 + Math.random() * 400;
-            }
-            update() {
-                this.x += this.speedX + Math.sin(this.life * 0.005) * 0.06;
-                this.y += this.speedY + Math.cos(this.life * 0.007) * 0.06;
-                this.life++;
-                if (this.x < 0 || this.x > bgW) this.speedX *= -1;
-                if (this.y < 0 || this.y > bgH) this.speedY *= -1;
-                if (this.life > this.maxLife) {
-                    this.reset();
-                    this.life = 0;
-                }
-            }
-            draw(ctx) {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.globalAlpha = this.opacity * 0.4; // ★ 透明度系数 0.4
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 20;
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.globalAlpha = 1;
-            }
-        }
+/* ===== 自定义光标 ===== */
+const dot=document.getElementById('cursorDot');
+const ring=document.getElementById('cursorRing');
+let mx=-100,my=-100,rx=-100,ry=-100;
+window.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function cursor(){
+  rx+=(mx-rx)*0.18;ry+=(my-ry)*0.18;
+  dot.style.left=mx+'px';dot.style.top=my+'px';
+  ring.style.left=rx+'px';ring.style.top=ry+'px';
+  requestAnimationFrame(cursor);
+})();
+document.querySelectorAll('.contact a,.theme-toggle').forEach(a=>{
+  a.addEventListener('mouseenter',()=>{ring.style.width='44px';ring.style.height='44px';ring.style.borderColor='rgba(74,107,154,.8)';});
+  a.addEventListener('mouseleave',()=>{ring.style.width='32px';ring.style.height='32px';ring.style.borderColor='var(--cursor-ring)';});
+});
 
-        const floatParticles = [];
-        for (let i = 0; i < 60; i++) { // 减少数量因为尺寸大了
-            const p = new FloatParticle();
-            p.life = Math.random() * p.maxLife;
-            floatParticles.push(p);
-        }
+/* ===== 鼠标光晕跟随 ===== */
+const glow=document.getElementById('cursorGlow');
+let gx=-1000,gy=-1000;
+window.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;gxTarget=e.clientX;gyTarget=e.clientY;});
+let gxTarget=-1000,gyTarget=-1000;
+(function follow(){
+  gx+=(gxTarget-gx)*0.1;gy+=(gyTarget-gy)*0.1;
+  glow.style.left=gx+'px';glow.style.top=gy+'px';
+  requestAnimationFrame(follow);
+})();
 
-        // --- 光晕（保持不变） ---
-        class Glow {
-            constructor() {
-                this.x = Math.random() * bgW;
-                this.y = Math.random() * bgH;
-                this.radius = 180 + Math.random() * 300;
-                this.speedX = (Math.random() - 0.5) * 0.3;
-                this.speedY = (Math.random() - 0.5) * 0.3;
-                const colors = ['#0b121c', '#1a2b4c', '#2c3d5c'];
-                this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.opacity = 0.05 + Math.random() * 0.08;
-                this.phase = Math.random() * Math.PI * 2;
-            }
-            update() {
-                this.x += this.speedX + Math.sin(this.phase) * 0.15;
-                this.y += this.speedY + Math.cos(this.phase * 0.7) * 0.15;
-                this.phase += 0.005;
-                if (this.x < -200 || this.x > bgW + 200) this.speedX *= -1;
-                if (this.y < -200 || this.y > bgH + 200) this.speedY *= -1;
-                this.radius += Math.sin(this.phase * 0.5) * 0.15;
-                if (this.radius < 150) this.radius = 150;
-                if (this.radius > 500) this.radius = 500;
-            }
-            draw(ctx) {
-                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-                grad.addColorStop(0, this.color + '80');
-                grad.addColorStop(0.4, this.color + '40');
-                grad.addColorStop(1, this.color + '00');
-                ctx.fillStyle = grad;
-                ctx.globalAlpha = this.opacity;
-                ctx.fillRect(this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
-                ctx.globalAlpha = 1;
-            }
-        }
+/* ===== 粒子光点 ===== */
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+window.addEventListener('resize',resize);resize();
+let parts=[];
+const colors=['74,107,154','59,90,122','107,133,181'];
+function initParts(){
+  parts=[];
+  for(let i=0;i<80;i++){
+    parts.push({
+      x:Math.random()*W,y:Math.random()*H,
+      r:Math.random()*1.6+0.4,
+      vx:(Math.random()-.5)*0.25,vy:(Math.random()-.5)*0.25,
+      c:colors[Math.floor(Math.random()*colors.length)],
+      alpha:Math.random()*0.6+0.2
+    });
+  }
+}
+initParts();
+const pmouse={x:-9999,y:-9999};
+window.addEventListener('mousemove',e=>{pmouse.x=e.clientX;pmouse.y=e.clientY;});
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  for(const p of parts){
+    const dx=p.x-pmouse.x,dy=p.y-pmouse.y;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(d<160){p.vx+=(dx/d)*0.05;p.vy+=(dy/d)*0.05;}
+    p.vx*=0.97;p.vy*=0.97;
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<0||p.x>W)p.vx*=-1;
+    if(p.y<0||p.y>H)p.vy*=-1;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle='rgba('+p.c+','+p.alpha+')';
+    ctx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+draw();
 
-        const glows = [];
-        for (let i = 0; i < 4; i++) {
-            glows.push(new Glow());
-        }
+/* ===== 打字机逐字 ===== */
+const nameEl=document.getElementById('name');
+const sloganEl=document.getElementById('slogan');
+const fullName='Lani · Zucker';
 
-        function animateBg() {
-            bgCtx.clearRect(0, 0, bgW, bgH);
-            glows.forEach(g => { g.update();
-                g.draw(bgCtx); });
-            floatParticles.forEach(p => { p.update();
-                p.draw(bgCtx); });
-            requestAnimationFrame(animateBg);
-        }
-        animateBg();
+// 打字机：名字逐字出现
+function typeName(callback){
+  nameEl.innerHTML='';
+  let i=0;
+  const caret=document.createElement('span');caret.className='caret';caret.textContent='|';
+  nameEl.appendChild(caret);
+  const timer=setInterval(()=>{
+    if(i<fullName.length){
+      const s=document.createElement('span');
+      s.className='ch';
+      if(fullName[i]===' '){s.className='ch space';s.innerHTML='&nbsp;';}
+      else s.textContent=fullName[i];
+      nameEl.insertBefore(s,caret);
+      i++;
+    }else{
+      clearInterval(timer);
+      caret.remove();
+      // 拆分字母供逐字 hover
+      setupCharHover();
+      callback&&callback();
+    }
+  },90);
+}
+// 拆分字母并绑定逐字 hover
+function setupCharHover(){
+  const nameChars=[...nameEl.querySelectorAll('.ch')];
+  nameChars.forEach((c,idx)=>{
+    c.addEventListener('mouseenter',()=>setGlow(nameChars,idx));
+    c.addEventListener('mouseleave',()=>{
+      setTimeout(()=>{if(!nameEl.matches(':hover'))resetGroup(nameChars);},80);
+    });
+  });
+  nameEl.addEventListener('mouseleave',()=>resetGroup(nameChars));
+  // slogan 拆字
+  const sloganChars=splitChars(sloganEl);
+  sloganChars.forEach((c,idx)=>{
+    c.addEventListener('mouseenter',()=>setGlow(sloganChars,idx));
+    c.addEventListener('mouseleave',()=>{
+      setTimeout(()=>{if(!sloganEl.matches(':hover'))resetGroup(sloganChars);},80);
+    });
+  });
+  sloganEl.addEventListener('mouseleave',()=>resetGroup(sloganChars));
+}
+function splitChars(el){
+  const text=el.textContent;
+  el.textContent='';el.classList.add('show');
+  const chars=[];
+  for(const ch of text){
+    const s=document.createElement('span');
+    s.className='ch';
+    if(ch===' '){s.className='ch space';s.innerHTML='&nbsp;';}
+    else s.textContent=ch;
+    el.appendChild(s);chars.push(s);
+  }
+  return chars;
+}
+function clearStates(group){
+  group.forEach(c=>c.className='ch'+(c.classList.contains('space')?' space':''));
+}
+function setGlow(group,idx){
+  clearStates(group);
+  const n=group.length;
+  for(let i=0;i<n;i++){
+    const dist=Math.abs(i-idx);
+    const cls=dist===0?'active':(dist===1?'glow1':(dist===2?'glow2':''));
+    if(cls){
+      group[i].className='ch '+cls+(group[i].classList.contains('space')?' space':'');
+    }else{
+      group[i].className='ch'+(group[i].classList.contains('space')?' space':'');
+    }
+  }
+}
+function resetGroup(group){clearStates(group);}
 
-        // ================================================================
-        //  第二部分：绘画画布 —— 鼠标轨迹粒子
-        //  尺寸 0.5~7px，颜色包含亮色，透明度 life * 0.7
-        // ================================================================
-        const paintCanvas = document.getElementById('paintCanvas');
-        const paintCtx = paintCanvas.getContext('2d');
-        let paintW, paintH;
+// 启动：直接开始逐字打印（去掉遮罩，打开即打字）
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(typeName, 300);
+});
 
-        function resizePaint() {
-            paintW = paintCanvas.width = window.innerWidth;
-            paintH = paintCanvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizePaint);
-        resizePaint();
+/* ===== 主题切换 ===== */
+const themeToggle=document.getElementById('themeToggle');
+// 初始化：优先读 localStorage，无记录则默认深色
+(function initTheme(){
+  const saved=localStorage.getItem('lani-theme');
+  const html=document.documentElement;
+  if(saved==='light'){
+    html.setAttribute('data-theme','light');
+    document.body.classList.add('light');
+  }else{
+    html.setAttribute('data-theme','dark');
+    document.body.classList.remove('light');
+  }
+})();
+themeToggle.addEventListener('click',()=>{
+  const html=document.documentElement;
+  const isLight=html.getAttribute('data-theme')==='light';
+  if(isLight){
+    html.setAttribute('data-theme','dark');
+    document.body.classList.remove('light');
+    localStorage.setItem('lani-theme','dark');
+  }else{
+    html.setAttribute('data-theme','light');
+    document.body.classList.add('light');
+    localStorage.setItem('lani-theme','light');
+  }
+});
 
-        // --- 绘画粒子 ---
-        class PaintParticle {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 0.2 + Math.random() * 0.6;
-                this.vx = Math.cos(angle) * speed;
-                this.vy = Math.sin(angle) * speed - 0.1;
-                // ★ 尺寸 0.5~7px
-                this.size = 0.5 + Math.random() * 6.5;
-                // ★ 颜色包含亮色和深色
-                const colors = ['#a8c4e6', '#d6dff0', '#1a2b4c', '#2c3d5c', '#0b121c', '#4a6b9a'];
-                this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.life = 1;
-                this.decay = 0.006 + Math.random() * 0.012;
-                this.drift = (Math.random() - 0.5) * 0.02;
-                this.phase = Math.random() * Math.PI * 2;
-            }
+/* ===== 点击涟漪 ===== */
+nameEl.addEventListener('click',(e)=>{
+  const rect=e.currentTarget.getBoundingClientRect();
+  const ripple=document.createElement('span');
+  ripple.className='ripple';
+  ripple.style.left=(e.clientX-rect.left)+'px';
+  ripple.style.top=(e.clientY-rect.top)+'px';
+  nameEl.appendChild(ripple);
+  setTimeout(()=>ripple.remove(),800);
+});
 
-            update() {
-                this.x += this.vx + Math.sin(this.phase) * 0.1;
-                this.y += this.vy + Math.cos(this.phase * 0.7) * 0.1;
-                this.phase += 0.03;
-                this.vx *= 0.99;
-                this.vy *= 0.99;
-                this.life -= this.decay;
-                this.size *= 0.998;
-                return this.life > 0.01 && this.size > 0.2;
-            }
-
-            draw(ctx) {
-                const alpha = this.life * 0.7; // ★ 透明度系数 0.7
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, Math.max(0.3, this.size), 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.globalAlpha = alpha;
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 12;
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.globalAlpha = 1;
-            }
-        }
-
-        const paintParticles = [];
-        const MAX_PAINT = 200;
-
-        function spawnPaintParticles(x, y, count = 3) {
-            for (let i = 0; i < count; i++) {
-                if (paintParticles.length >= MAX_PAINT) {
-                    paintParticles.shift();
-                }
-                const p = new PaintParticle(
-                    x + (Math.random() - 0.5) * 4,
-                    y + (Math.random() - 0.5) * 4
-                );
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 0.1 + Math.random() * 0.6;
-                p.vx = Math.cos(angle) * speed;
-                p.vy = Math.sin(angle) * speed - 0.2;
-                paintParticles.push(p);
-            }
-        }
-
-        let isMouseDown = false;
-        document.addEventListener('mousemove', (e) => {
-            const x = e.clientX;
-            const y = e.clientY;
-            if (isMouseDown) {
-                spawnPaintParticles(x, y, 3);
-            } else {
-                spawnPaintParticles(x, y, 1 + Math.random());
-            }
-        });
-
-        document.addEventListener('mousedown', () => { isMouseDown = true; });
-        document.addEventListener('mouseup', () => { isMouseDown = false; });
-
-        document.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            if (touch) {
-                spawnPaintParticles(touch.clientX, touch.clientY, 2);
-            }
-        }, { passive: false });
-
-        function animatePaint() {
-            paintCtx.clearRect(0, 0, paintW, paintH);
-            for (let i = paintParticles.length - 1; i >= 0; i--) {
-                const p = paintParticles[i];
-                if (p.update()) {
-                    p.draw(paintCtx);
-                } else {
-                    paintParticles.splice(i, 1);
-                }
-            }
-            requestAnimationFrame(animatePaint);
-        }
-        animatePaint();
-
-        // ================================================================
-        //  第三部分：按键粒子（保持不变）
-        // ================================================================
-        const btnCanvas = document.getElementById('btnParticleCanvas');
-        const btnCtx = btnCanvas.getContext('2d');
-        const btnWrapper = document.getElementById('btnWrapper');
-        const actionBtn = document.getElementById('actionBtn');
-
-        let btnW, btnH, btnCx, btnCy, btnRadius;
-        let btnParticles = [];
-        const BTN_MAX = 60;
-        let isBursting = false;
-        let burstTimeout = null;
-
-        const BTN_COLORS = ['#1a2b4c', '#2c3d5c', '#0b121c', '#4a6b9a'];
-
-        class BtnParticle {
-            constructor(angle, radius, size, color) {
-                this.angle = angle || Math.random() * Math.PI * 2;
-                this.radius = radius || btnRadius * (0.4 + Math.random() * 0.7);
-                this.size = size || 2 + Math.random() * 4;
-                this.color = color || BTN_COLORS[Math.floor(Math.random() * BTN_COLORS.length)];
-                this.speed = 0.006 + Math.random() * 0.015;
-                this.phase = Math.random() * Math.PI * 2;
-                this.life = 0.7 + 0.3 * Math.random();
-                this.isBurst = false;
-                this.vx = 0;
-                this.vy = 0;
-                this.burstLife = 1;
-            }
-
-            update() {
-                if (this.isBurst) {
-                    this.x += this.vx;
-                    this.y += this.vy;
-                    this.vx *= 0.97;
-                    this.vy *= 0.97;
-                    this.burstLife -= 0.012;
-                    this.size *= 0.996;
-                    return this.burstLife > 0.01 && this.size > 0.3;
-                } else {
-                    this.phase += this.speed;
-                    const r = this.radius * (0.85 + 0.15 * Math.sin(this.phase * 1.3));
-                    const a = this.angle + this.phase * 0.6;
-                    this.x = btnCx + Math.cos(a) * r;
-                    this.y = btnCy + Math.sin(a) * r;
-                    this.life = 0.7 + 0.3 * Math.sin(this.phase * 0.5 + 1);
-                    return true;
-                }
-            }
-
-            draw(ctx) {
-                const alpha = this.isBurst ? Math.max(0, this.burstLife * 0.7) : this.life * 0.5;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, Math.max(0.5, this.size * (this.isBurst ? 1.2 : 0.8)), 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.globalAlpha = alpha;
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = this.isBurst ? 15 : 8;
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.globalAlpha = 1;
-            }
-
-            burst(angle) {
-                this.isBurst = true;
-                this.burstLife = 1;
-                const dir = angle + (Math.random() - 0.5) * 1.2;
-                const speed = 3 + Math.random() * 6;
-                this.vx = Math.cos(dir) * speed;
-                this.vy = Math.sin(dir) * speed;
-                this.size = 3 + Math.random() * 5;
-            }
-
-            resetToOrbit() {
-                this.isBurst = false;
-                this.burstLife = 1;
-                this.angle = Math.random() * Math.PI * 2;
-                this.radius = btnRadius * (0.4 + Math.random() * 0.7);
-                this.phase = Math.random() * Math.PI * 2;
-                this.size = 2 + Math.random() * 4;
-            }
-        }
-
-        function initBtnParticles() {
-            btnParticles = [];
-            for (let i = 0; i < BTN_MAX; i++) {
-                const p = new BtnParticle();
-                p.phase = (i / BTN_MAX) * Math.PI * 2 + Math.random() * 0.3;
-                btnParticles.push(p);
-            }
-        }
-
-        function resizeBtnCanvas() {
-            const rect = btnWrapper.getBoundingClientRect();
-            const scale = window.devicePixelRatio || 1;
-            btnW = rect.width * scale;
-            btnH = rect.height * scale;
-            btnCanvas.width = btnW;
-            btnCanvas.height = btnH;
-            btnCanvas.style.width = rect.width + 'px';
-            btnCanvas.style.height = rect.height + 'px';
-            btnCx = btnW / 2;
-            btnCy = btnH / 2;
-            btnRadius = Math.min(btnW, btnH) * 0.32;
-            if (btnParticles.length > 0) {
-                btnParticles.forEach(p => {
-                    p.radius = btnRadius * (0.4 + Math.random() * 0.7);
-                });
-            } else {
-                initBtnParticles();
-            }
-        }
-
-        function triggerBurst() {
-            if (isBursting) return;
-            isBursting = true;
-            const baseAngle = Math.random() * Math.PI * 2;
-            btnParticles.forEach((p, i) => {
-                const angle = baseAngle + (i / btnParticles.length) * Math.PI * 2;
-                p.burst(angle);
-            });
-            if (burstTimeout) clearTimeout(burstTimeout);
-            burstTimeout = setTimeout(() => {
-                isBursting = false;
-                btnParticles.forEach(p => p.resetToOrbit());
-                btnParticles.forEach((p, i) => {
-                    p.angle = (i / btnParticles.length) * Math.PI * 2 + Math.random() * 0.2;
-                    p.phase = p.angle * 1.5;
-                });
-            }, 1600);
-        }
-
-        let hoverIntensity = 0;
-
-        function animateBtnParticles() {
-            btnCtx.clearRect(0, 0, btnW, btnH);
-            btnParticles.forEach(p => {
-                if (!p.isBurst) {
-                    if (hoverIntensity > 0.1) {
-                        p.speed = 0.015 + hoverIntensity * 0.04;
-                    } else {
-                        p.speed = 0.006 + Math.random() * 0.01;
-                    }
-                }
-                p.update();
-                p.draw(btnCtx);
-            });
-            requestAnimationFrame(animateBtnParticles);
-        }
-
-        actionBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            triggerBurst();
-        });
-
-        actionBtn.addEventListener('mouseenter', () => {
-            hoverIntensity = 1;
-            btnParticles.forEach(p => {
-                if (!p.isBurst) {
-                    p.phase += 0.5 + Math.random() * 0.5;
-                }
-            });
-        });
-
-        actionBtn.addEventListener('mouseleave', () => {
-            hoverIntensity = 0;
-        });
-
-        window.addEventListener('resize', () => {
-            resizeBtnCanvas();
-        });
-
-        setTimeout(() => {
-            resizeBtnCanvas();
-            initBtnParticles();
-            animateBtnParticles();
-        }, 150);
-
-        // ================================================================
-        //  窗口变化统一适配
-        // ================================================================
-        window.addEventListener('resize', () => {
-            resizeBg();
-            resizePaint();
-        });
-
-        console.log('✦ Lani · Zucker已加载 ✦ 移动鼠标绘画 · 点击按钮潮汐');
-    </script>
+/* ===== 视差效果（轻微跟随鼠标） ===== */
+const center=document.querySelector('.center');
+let px=0,py=0,curPx=0,curPy=0;
+window.addEventListener('mousemove',e=>{
+  px=(e.clientX/W-.5)*12;py=(e.clientY/H-.5)*12;
+});
+(function parallax(){
+  curPx+=(px-curPx)*0.05;curPy+=(py-curPy)*0.05;
+  center.style.transform='translate('+curPx+'px,'+curPy+'px)';
+  requestAnimationFrame(parallax);
+})();
+</script>
 </body>
 </html>
