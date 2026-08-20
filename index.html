@@ -349,7 +349,7 @@ draw();
 /* ===== 打字机逐字 ===== */
 const nameEl=document.getElementById('name');
 const sloganEl=document.getElementById('slogan');
-const fullName='Lani · Zuck';
+const fullName='Lani · Zucker';
 
 // 打字机：名字逐字出现
 function typeName(callback){
@@ -476,7 +476,7 @@ window.addEventListener('mousemove',e=>{
   px=(e.clientX/W-.5)*12;py=(e.clientY/H-.5)*12;
 });
 (function parallax(){
-  curPx+=(px-curPx)*0.05;curPy+=(py-curPy)*0.05;
+  curPx+=(px-curPx)*0.1;curPy+=(py-curPy)*0.1;
   center.style.transform='translate('+curPx+'px,'+curPy+'px)';
   requestAnimationFrame(parallax);
 })();
